@@ -2,6 +2,7 @@
 #include <esp_mac.h>
 
 #include "mqtt.h"
+#include "config.h"
 
 MQTT::MQTT(WiFiClient *wifiClient, const char *mqttServer, int mqttPort, const char *mqttUser, const char *mqttPassword, const char *mqttRootTopic, bool homeAssistantAutoDiscovery, const char *homeAssistantAutoDiscoveryPrefix)
 {
@@ -112,17 +113,28 @@ void MQTT::setup()
             Serial.println(" trying again in 1 second.");
             delay(1000);
             retries++;
-            if (retries > 60)
-                ESP.restart();
+            //try to connect to MQTT
+            if (retries >= NUMBER_OF_MQTT_RETRIES){
+                this->MQTT_connection_failed = true;
+                break;
+                //ESP.restart();
+            }
         }
     }
+    if (!this->get_MQTT_connection_failed()){
+        Serial.println("[MQTT] connected!");
+        this->client->publish(String(this->getCombinedRootTopic() + "/availability").c_str(), "online", true);
+        this->client->subscribe(String(this->getCombinedRootTopic() + "/+/command").c_str());
+        this->client->subscribe(String(this->getCombinedRootTopic() + "/+/pair").c_str());
 
-    Serial.println("[MQTT] connected!");
-    this->client->publish(String(this->getCombinedRootTopic() + "/availability").c_str(), "online", true);
-    this->client->subscribe(String(this->getCombinedRootTopic() + "/+/command").c_str());
-    this->client->subscribe(String(this->getCombinedRootTopic() + "/+/pair").c_str());
+        this->sendAllHomeAssistantDiscoveryMessages();
+    }
+    else
+        Serial.println("[MQTT] Not connected! If you want to retry for connection pres RST button.");
+}
 
-    this->sendAllHomeAssistantDiscoveryMessages();
+boolean MQTT::get_MQTT_connection_failed(){
+    return this->MQTT_connection_failed;
 }
 
 bool MQTT::addLightbar(Lightbar *lightbar)
@@ -217,11 +229,11 @@ void MQTT::sendHomeAssistantLightbarDiscoveryMessages(Lightbar *lightbar)
     const String baseConfig = R"json(
     "schema": "json",
     "o": {
-        "name": "lightbar2mqtt",
+        "name": "lightbar2mqtt_with_miboxer_bridge",
         "sw_version": ")json" +
                               constants::VERSION +
                               R"json(",
-        "support_url": "https://github.com/ebinf/lightbar2mqtt"
+        "support_url": "https://github.com/Wr1nGl/lightbar2mqtt_with_miboxer_bridge"
     },
     "~": ")json" + this->getCombinedRootTopic() +
                               "/" +
@@ -238,7 +250,7 @@ void MQTT::sendHomeAssistantLightbarDiscoveryMessages(Lightbar *lightbar)
                               R"json(",
         "mdl": "Mi Computer Monitor Light Bar (MJGJD01YL)",
         "mf": "Xiaomi",
-        "sw": "lightbar2mqtt )json" +
+        "sw": "lightbar2mqtt_with_miboxer_bridge )json" +
                               constants::VERSION +
                               R"json(",
         "sn": ")json" +
@@ -294,11 +306,11 @@ void MQTT::sendHomeAssistantRemoteDiscoveryMessages(Remote *remote)
     const String baseConfig = R"json(
     "schema": "json",
     "o": {
-        "name": "lightbar2mqtt",
+        "name": "lightbar2mqtt_with_miboxer_bridge",
         "sw_version": ")json" +
                               constants::VERSION +
                               R"json(",
-        "support_url": "https://github.com/ebinf/lightbar2mqtt"
+        "support_url": "https://github.com/Wr1nGl/lightbar2mqtt_with_miboxer_bridge"
     },
     "~": ")json" + this->getCombinedRootTopic() +
                               "/" +
@@ -313,7 +325,7 @@ void MQTT::sendHomeAssistantRemoteDiscoveryMessages(Remote *remote)
                               R"json(",
         "mdl": "Mi Computer Monitor Light Bar Remote Control (MJGJD01YL)",
         "mf": "Xiaomi",
-        "sw": "lightbar2mqtt )json" +
+        "sw": "lightbar2mqtt_with_miboxer_bridge )json" +
                               constants::VERSION +
                               R"json(",
         "sn": ")json" + remote->getSerialString() +
@@ -369,12 +381,14 @@ void MQTT::sendHomeAssistantRemoteDiscoveryMessages(Remote *remote)
 
 void MQTT::loop()
 {
-    if (!this->client->connected())
-    {
-        Serial.println("[MQTT] connection lost!");
-        this->setup();
+    if (!this->get_MQTT_connection_failed()){
+        if (!this->client->connected())
+        {
+            Serial.println("[MQTT] connection lost!");
+            this->setup();
+        }
+        this->client->loop();
     }
-    this->client->loop();
 }
 
 void MQTT::sendAction(Remote *remote, byte command, byte options)

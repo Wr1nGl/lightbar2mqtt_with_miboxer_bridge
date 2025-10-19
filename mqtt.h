@@ -26,8 +26,10 @@ public:
     void sendAction(Remote *remote, byte command, byte options);
     const String getCombinedRootTopic();
     const String getClientId();
+    boolean get_MQTT_connection_failed();
 
 private:
+    boolean MQTT_connection_failed = false;
     WiFiClient *wifiClient;
     PubSubClient *client;
     String clientId;

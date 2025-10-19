@@ -9,7 +9,7 @@
 WiFiClient wifiClient;
 Radio radio(RADIO_PIN_CE, RADIO_PIN_CSN);
 MQTT mqtt(&wifiClient, MQTT_SERVER, MQTT_PORT, MQTT_USER, MQTT_PASSWORD, MQTT_ROOT_TOPIC, HOME_ASSISTANT_DISCOVERY, HOME_ASSISTANT_DISCOVERY_PREFIX);
-
+boolean WIFI_connection_failed = false;
 void setupWifi()
 {
   Serial.print("[WiFi] Connecting to network \"");
@@ -25,51 +25,66 @@ void setupWifi()
     delay(1000);
     Serial.print(".");
     retries++;
-    if (retries > 60)
-      ESP.restart();
+    if (retries >= NUMBER_OF_WIFI_RETRIES){
+      WIFI_connection_failed = true;
+      break;
+      //ESP.restart();
+    }
   }
-  Serial.println();
-  Serial.println("[WiFi] connected!");
 
-  Serial.print("[WiFi] IP address: ");
-  Serial.println(WiFi.localIP());
+  if (WiFi.status() != WL_CONNECTED){
+    Serial.println();
+    Serial.println("[WiFi] Not connected! If you want to retry for connection pres RST button.");
+  }
+  else{
+    Serial.println();
+    Serial.println("[WiFi] connected!");
+
+    Serial.print("[WiFi] IP address: ");
+    Serial.println(WiFi.localIP());
+  }
 }
 
 void setup()
 {
   Serial.begin(115200);
-  Serial.println("##########################################");
-  Serial.println("# LIGHTBAR2MQTT            (Version " + constants::VERSION + ") #");
-  Serial.println("# https://github.com/ebinf/lightbar2mqtt #");
-  Serial.println("##########################################");
+  Serial.println("##################################################################");
+  Serial.println("# lightbar2mqtt_with_miboxer_bridge             (Version " + constants::VERSION + ")  #");
+  Serial.println("# https://github.com/Wr1nGl/lightbar2mqtt_with_miboxer_bridge    #");
+  Serial.println("##################################################################");
 
   radio.setup();
 
   setupWifi();
 
+  //no need to connect to MQTT if we dont have wifi
+  if (WiFi.isConnected())
+    mqtt.setup();
+  
   for (int i = 0; i < sizeof(REMOTES) / sizeof(SerialWithName); i++)
   {
     Remote *remote = new Remote(&radio, REMOTES[i].serial, REMOTES[i].name, REMOTES[i].miboxer_groups_len, REMOTES[i].miboxer_groups);
-    mqtt.addRemote(remote);
+    if (WiFi.isConnected() && !mqtt.get_MQTT_connection_failed())
+      mqtt.addRemote(remote);
   }
 
   for (int i = 0; i < sizeof(LIGHTBARS) / sizeof(SerialWithName); i++)
   {
     Lightbar *lightbar = new Lightbar(&radio, LIGHTBARS[i].serial, LIGHTBARS[i].name);
-    mqtt.addLightbar(lightbar);
+    if (WiFi.isConnected() && !mqtt.get_MQTT_connection_failed())
+      mqtt.addLightbar(lightbar);
   }
-
-  mqtt.setup();
 }
 
 void loop()
 {
-  if (!WiFi.isConnected())
+  if (!WIFI_connection_failed && !WiFi.isConnected())
   {
     Serial.println("[WiFi] connection lost!");
     setupWifi();
   }
-
-  mqtt.loop();
+  
+  if (WiFi.isConnected() && !mqtt.get_MQTT_connection_failed())
+    mqtt.loop();
   radio.loop();
 }

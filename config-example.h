@@ -48,6 +48,9 @@ constexpr SerialWithName REMOTES[] = {
 #define MIBOXER_TRAILER 0x05
 
 /* -- WiFi ---------------------------------------------------------------------------------------------------- */
+// Number of retries before giving up on WiFi connection. If you want to reconnect just press RST button. If you have trouble connecting try to increasing this number.
+#define NUMBER_OF_WIFI_RETRIES 60
+
 // The SSID of the WiFi network to connect to.
 #define WIFI_SSID "<Your WiFi>"
 
@@ -55,6 +58,9 @@ constexpr SerialWithName REMOTES[] = {
 #define WIFI_PASSWORD "<Your Password>"
 
 /* -- MQTT ---------------------------------------------------------------------------------------------------- */
+// Number of retries before giving up on MQTT. If you want to reconnect just press RST button.
+#define NUMBER_OF_MQTT_RETRIES 3
+
 // The IP address of the MQTT broker to connect to.
 #define MQTT_SERVER "192.168.1.1"
 

@@ -6,8 +6,8 @@
 
 namespace constants
 {
-    // The version number of lightbar2mqtt.
-    const String VERSION = "0.2";
+    // The version number of lightbar2mqtt_with_miboxer_bridge. based on lightbar2mqtt 0.2 
+    const String VERSION = "0.2.1";
 
     // The maximum number of light bars that can be connected to the controller.
     const uint8_t MAX_LIGHTBARS = 10;
