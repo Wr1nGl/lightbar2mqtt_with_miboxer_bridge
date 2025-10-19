@@ -1,6 +1,6 @@
 #include "remote.h"
 
-Remote::Remote(Radio *radio, uint32_t serial, const char *name)
+Remote::Remote(Radio *radio, uint32_t serial, const char *name, uint8_t trigger_groups_len, const uint8_t *trigger_groups)
 {
     this->radio = radio;
     this->serial = serial;
@@ -9,10 +9,33 @@ Remote::Remote(Radio *radio, uint32_t serial, const char *name)
     this->radio->addRemote(this);
 
     this->serialString = "0x" + String(this->serial, HEX);
+
+    this->num_triggers = trigger_groups_len;
+    this->generate_trigger_groups(trigger_groups);
 }
 
 Remote::~Remote()
 {
+}
+
+uint8_t* Remote::getTrigger_groups(){
+    return this->trigger_groups;
+}
+
+uint8_t Remote::getNum_triggers(){
+    return this->num_triggers;
+}
+
+void Remote::generate_trigger_groups(const uint8_t *trigger_groups){
+    int insert_counter = 0;
+    for (int i = 0; i < this->num_triggers; i++){
+        //on trigger
+        this->trigger_groups[insert_counter++] = trigger_groups[i];
+        //off trigger - turn off is encoded as group + 9 -> based on my remote (c5)
+        this->trigger_groups[insert_counter++] = trigger_groups[i] + 9;
+    }
+    //the triggers doubled (on and off for each group) so update it
+    this->num_triggers = insert_counter;
 }
 
 uint32_t Remote::getSerial()

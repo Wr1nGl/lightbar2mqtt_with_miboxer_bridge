@@ -49,7 +49,7 @@ void setup()
 
   for (int i = 0; i < sizeof(REMOTES) / sizeof(SerialWithName); i++)
   {
-    Remote *remote = new Remote(&radio, REMOTES[i].serial, REMOTES[i].name);
+    Remote *remote = new Remote(&radio, REMOTES[i].serial, REMOTES[i].name, REMOTES[i].miboxer_groups_len, REMOTES[i].miboxer_groups);
     mqtt.addRemote(remote);
   }
 

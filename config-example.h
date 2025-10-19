@@ -14,7 +14,7 @@
 // If the serial is set to the same value as one remote's, the original remote will still control the light bar
 // directly. To separate the light bar from the original remote, set this to a different value, e.g. 0xABCDEF.
 //
-// The name will be used in Home Assistant.
+// The name will be used in Home Assistant. 
 constexpr SerialWithName LIGHTBARS[] = {
     {0xABCDEF, "Light Bar 1"},
 };
@@ -24,12 +24,28 @@ constexpr SerialWithName LIGHTBARS[] = {
 // Each entry consists of the serial and the name of the remote. By default, up to 10 remotes can be added.
 //
 // If you don't know the serial of your remote, just set this to any value and flash your controller. Once
-// the controller is running, the serial of your remote will be printed to the console.
+// the controller is running, for X seconds if you move the controller, the serial of your remote will be printed to the console.
 //
-// The name will be used in Home Assistant.
+// The name will be used in Home Assistant. -> xiaomi remote id, remote name in HA, number of groups, groups in miboxer remote it should listen to. Maximum of 9 groups is supported.
 constexpr SerialWithName REMOTES[] = {
-    {0x123456, "Remote 1"},
+    {0xABCDEF, "Remote 1", 2, {0,2}},
 };
+// SET ID IN LIGHTBARS AND IN REMOTES TO THE SAME VALUE. HA is sending commands to lightbar ID and bridge is sending them using remote ID. 
+
+
+// How many seconds should the radio listen for xiaomi original remote signal (if you want to find out remote ID) -> set it to higher number if connecting to wifi takes too long (e.g. 60). 0 means dicovery will be skipped. 
+#define WAIT_TIME_ON_STARTUP 0
+
+/* -- Miboxer remote -------------------------------------------------------------------------------------------*/
+// Settings for miboxer remote taken from https://github.com/sidoh/esp8266_milight_hub/blob/master/lib/Radio/MiLightRadioConfig.cpp
+// The setting in the link are: first_address_part, second_address_part, packet_length, channel1, channel2, channel3, preamble, trailer
+#define MIBOXER_FIRST_ADDRESS_PART 0x7236
+#define MIBOXER_SECOND_ADDRESS_PART 0x1809
+#define MIBOXER_PACKET_LENGTH 9
+// Channel which should the radio listen for commands -> for some reason the original code does +2 to the channel (that operation is already done when setting up radio so just use the values from the link)
+#define MIBOXER_RADIO_CHANNEL 8
+#define MIBOXER_PREAMBLE 0xAA
+#define MIBOXER_TRAILER 0x05
 
 /* -- WiFi ---------------------------------------------------------------------------------------------------- */
 // The SSID of the WiFi network to connect to.

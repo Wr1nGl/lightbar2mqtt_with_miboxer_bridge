@@ -1,7 +1,8 @@
 #include "radio.h"
+#include "config.h"
 
 /*
- * Package structure:
+ * Package structure fo xiaomi bar:
  *  0 –  7: Preamble (see constant above)
  *  8 – 10: Remote ID
  * 11 – 11: Separator (0xFF)
@@ -9,6 +10,8 @@
  * 13 – 14: Command ID + options
  * 15 – 16: CRC16 checksum
  */
+
+//static void format(uint8_t const* packet, char* buffer);
 
 Radio::Radio(uint8_t ce, uint8_t csn)
 {
@@ -78,8 +81,25 @@ bool Radio::removeRemote(Remote *remote)
     return false;
 }
 
+void Radio::calculate_address(){
+    uint8_t *syncwordBytes = this->receive_miboxer_address;
+    //5 byte address is expected, others wont work
+    int ix = 5;
+    syncwordBytes[ --ix ] = reverseBits(
+        ((MIBOXER_FIRST_ADDRESS_PART << 4) & 0xF0) | (MIBOXER_PREAMBLE & 0x0F)
+    );
+    syncwordBytes[ --ix ] = reverseBits((MIBOXER_FIRST_ADDRESS_PART >> 4) & 0xFF);
+    syncwordBytes[ --ix ] = reverseBits(((MIBOXER_FIRST_ADDRESS_PART >> 12) & 0x0F) + ((MIBOXER_SECOND_ADDRESS_PART << 4) & 0xF0));
+    syncwordBytes[ --ix ] = reverseBits((MIBOXER_SECOND_ADDRESS_PART >> 4) & 0xFF);
+    syncwordBytes[ --ix ] = reverseBits(
+        ((MIBOXER_SECOND_ADDRESS_PART >> 12) & 0x0F) | ((MIBOXER_TRAILER << 4) & 0xF0)
+    );
+}
+
 void Radio::sendCommand(uint32_t serial, byte command, byte options)
 {
+    //if we are sending command always send on xiaomi radio setting
+    this->set_xiaomi_bar();
     PackageIdForSerial *package_id = nullptr;
     for (int i = 0; i < this->num_package_ids; i++)
     {
@@ -103,7 +123,7 @@ void Radio::sendCommand(uint32_t serial, byte command, byte options)
         package_id->package_id = 0;
         this->num_package_ids++;
     }
-
+    
     byte data[17] = {0};
     memcpy(data, Radio::preamble, sizeof(Radio::preamble));
     data[8] = (serial & 0xFF0000) >> 16;
@@ -128,17 +148,37 @@ void Radio::sendCommand(uint32_t serial, byte command, byte options)
     Serial.println();
 
     this->radio.stopListening();
-    for (int i = 0; i < 20; i++)
+    for (int k = 0; k < 20; k++)
     {
         this->radio.write(&data, sizeof(data), true);
+
         delay(10);
     }
-    this->radio.startListening();
+    this->set_miboxer_remote();
+    //this->radio.startListening();
 }
 
 void Radio::sendCommand(uint32_t serial, byte command)
 {
     return this->sendCommand(serial, command, 0x0);
+}
+
+void Radio::set_miboxer_remote(){
+    Serial.println("Setting miboxer remote settings");
+    this->radio.stopListening();
+    this->radio.setChannel(MIBOXER_RADIO_CHANNEL + 2);
+    this->radio.setDataRate(RF24_1MBPS);
+    //data+1(packet_length)+2(crc)
+    this->radio.setPayloadSize(MIBOXER_PACKET_LENGTH + 1 + 2);
+    this->radio.startListening();
+}
+
+void Radio::set_xiaomi_bar(){
+    Serial.println("Setting xiaomi bar settings");
+    this->radio.stopListening();
+    this->radio.setChannel(68);
+    this->radio.setPayloadSize(17);
+    this->radio.setDataRate(RF24_2MBPS);
 }
 
 void Radio::setup()
@@ -153,20 +193,35 @@ void Radio::setup()
             ESP.restart();
     }
 
+    if (WAIT_TIME_ON_STARTUP == 0){
+        this->init_time_lock = true;
+    }
+
+    //calculate the miboxer remote address
+    this->calculate_address();
+
     Serial.println("[Radio] Setting up radio...");
     this->radio.failureDetected = false;
 
-    this->radio.openReadingPipe(0, Radio::address);
-
-    this->radio.setChannel(68);
-    this->radio.setDataRate(RF24_2MBPS);
+    if (this->init_time_lock){
+        this->radio.setChannel(MIBOXER_RADIO_CHANNEL + 2);
+        this->radio.setDataRate(RF24_1MBPS);
+        //data+1(packet_length)+2(crc)
+        this->radio.setPayloadSize(MIBOXER_PACKET_LENGTH + 1 + 2);
+    }
+    else{
+        this->radio.setChannel(68);
+        this->radio.setDataRate(RF24_2MBPS);
+        //data+1(packet_length)+2(crc)
+        this->radio.setPayloadSize(17);
+    }
+    this->radio.openReadingPipe(0, Radio::receive_miboxer_address);
+    this->radio.openReadingPipe(1, Radio::receive_xiaomi_address);
     this->radio.disableCRC();
     this->radio.disableDynamicPayloads();
-    this->radio.setPayloadSize(17);
     this->radio.setAutoAck(false);
-    this->radio.setRetries(15, 15);
-
-    this->radio.openWritingPipe(Radio::address);
+    this->radio.setRetries(0, 0);
+    this->radio.openWritingPipe(Radio::send_address);
 
     this->radio.startListening();
     Serial.println("[Radio] done!");
@@ -182,11 +237,24 @@ void Radio::loop()
         delay(1000);
     }
 
-    if (this->radio.available())
-        this->handlePackage();
+    uint8_t pipe_number;
+    if (this->radio.available(&pipe_number)){
+        if (pipe_number == 0) {
+            this->handle_miboxer_Package();
+        }
+        else if (pipe_number == 1) {
+            handle_xiaomi_Package();
+        }
+
+        if (!this->init_time_lock && millis() - this->init_time > WAIT_TIME_ON_STARTUP * 1000) {
+            this->radio.closeReadingPipe(1);
+            this->set_miboxer_remote();
+            this->init_time_lock = true;
+        }
+    }    
 }
 
-void Radio::handlePackage()
+void Radio::handle_xiaomi_Package()
 {
     // Read raw data, append a 5 and shift it. See
     // https://github.com/lamperez/xiaomi-lightbar-nrf24?tab=readme-ov-file#baseband-packet-format
@@ -265,4 +333,67 @@ void Radio::handlePackage()
 
     Serial.println("[Radio] Package received!");
     remote->callback(data[13], data[14]);
+}
+
+void Radio::handle_miboxer_Package()
+{
+    //data+1(packet_length)+2(crc)
+    int packet_length = MIBOXER_PACKET_LENGTH + 1 + 2;
+    uint8_t packet[packet_length];
+    int outp = 0;
+
+    radio.read(packet, packet_length);
+
+    for (int inp = 0; inp < packet_length; inp++) {
+        packet[outp++] = reverseBits(packet[inp]);
+    }
+
+    if (outp < 2) {
+        return;
+    }
+
+    //miboxer crc validation
+    if (!validate_miboxer_crc(packet, outp - 2)) {
+        return;
+    }
+
+    outp -= 2;
+        
+    uint8_t packet_without_crc_and_padding[MIBOXER_PACKET_LENGTH];
+    memcpy(packet_without_crc_and_padding, packet + 1, MIBOXER_PACKET_LENGTH);
+    
+    //good for reading packet format received by the remote, only works on newer, scrabmbled packets (as this entire repository, lol)
+    /*
+    char array[200];
+    format(packet_without_crc_and_padding, array);
+    Serial.println(array);
+    //*/
+
+    //in-place change
+    decodeV2Packet(packet_without_crc_and_padding);
+    
+    if (this->last_remote_packet_counter != packet_without_crc_and_padding[6]){
+        //set last counter to stop receiving multiple commands with the same counter
+        this->last_remote_packet_counter = 0;
+        this->last_remote_packet_counter = packet_without_crc_and_padding[6];
+        //turn on or off command
+        if (packet_without_crc_and_padding[4] == 0x01){
+            //look for the given group for each remote
+            Remote *remote = nullptr;
+            //loop through all the remotes
+            for (int i = 0; i < this->num_remotes; i++){
+                remote = this->remotes[i];
+                //loop all the trigger channels
+                for (int q = 0; q < remote->getNum_triggers(); q++){
+                    //check if the given group is valid for given remote
+                    if (packet_without_crc_and_padding[5] == remote->getTrigger_groups()[q]){
+                        //send signal to turn the bar on or off for all the remotes
+                        this->sendCommand(remote->getSerial(), 0x01);
+                        remote->callback(1, 0);
+                        break;
+                    }
+                }
+            }
+        }
+    }
 }

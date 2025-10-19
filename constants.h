@@ -27,6 +27,9 @@ struct SerialWithName
 {
     uint32_t serial;
     const char *name;
+    //8 groups + 1 for all groups
+    uint8_t miboxer_groups_len = 0;
+    uint8_t miboxer_groups[9];
 };
 
 #endif
