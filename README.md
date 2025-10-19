@@ -1,3 +1,22 @@
+# lightbar2mqtt_with_miboxer_bridge
+This is modification of [lightbar2mqtt](https://github.com/ebinf/lightbar2mqtt). This repository uses code from [esp8266_milight_hub](https://github.com/sidoh/esp8266_milight_hub) to decode miboxer remote signals (I have butchered that repository for the code parts I needed). Made for newer remotes (the ones which scrambled packets). Tested on C5 remote, if nothing else, it should work on FUT089 as well. If you want support for other remotes additional code must be taken from [esp8266_milight_hub](https://github.com/sidoh/esp8266_milight_hub) repository. The main goal is to use MiBoxer remote to control xiaomi monitor bar (MQTT for the bar is just bonus). Well, control is strong word, it can turn the monitor bar on or off using miboxer remote. This bridge can work without HA. The bar has no state packets -> on and off is the same command and you cannot check the current status. Therefore if you press ON/OFF on your miboxer remote repeatedly you can keep turning the monitor bar on and off. 
+
+The config is partially the same as in [lightbar2mqtt](https://github.com/ebinf/lightbar2mqtt) but there are some changes:
+- use the same ID for remotes and controllers (even if you made them up)
+- remotes are using additional options
+  - number of groups the bridge should react to and specific group IDs. 0 means all groups.
+- WAIT_TIME_ON_STARTUP
+  - how many seconds should the bridge listen to xiaomi remote packets (if you want to find out your remote ID). Set it to 0 if you don't need it.
+- Miboxer remote part
+  - use https://github.com/sidoh/esp8266_milight_hub/blob/master/lib/Radio/MiLightRadioConfig.cpp to find your remote settings.
+  - The setting in the link are: first_address_part, second_address_part, packet_length, channel1, channel2, channel3, preamble, trailer
+  - choose 1 channel you want to liste on for miboxer remote commands
+  - once again, this repository was tested (and made) for C5/FUT089 remotes. You can try your luck with coppying the remote setting from [esp8266_milight_hub](https://github.com/sidoh/esp8266_milight_hub), but if the packets are not using scrambling it won't work and the code must be changed. I have no way to test that since I own only C5 remote.  
+
+The rest should be the same as [lightbar2mqtt](https://github.com/ebinf/lightbar2mqtt) (can be found below).
+
+Tested with C5, ESP32 and nRF24L01+ with 5V adapter. 
+
 # lightbar2mqtt
 
 Control your [Xiaomi Mi Computer Monitor Light Bar](https://www.mi.com/global/product/mi-computer-monitor-light-bar/) with MQTT and add it to Home Assistant! All you need is a ESP32, a nRF24 module and a light bar of course.
