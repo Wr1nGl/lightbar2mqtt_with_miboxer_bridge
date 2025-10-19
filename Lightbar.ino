@@ -78,13 +78,18 @@ void setup()
 
 void loop()
 {
-  if (!WIFI_connection_failed && !WiFi.isConnected())
-  {
-    Serial.println("[WiFi] connection lost!");
-    setupWifi();
+  //if wifi havent failed
+  if(!WIFI_connection_failed){
+    //if we lost connection reconnect
+    if (!WiFi.isConnected())
+    {
+      Serial.println("[WiFi] connection lost!");
+      setupWifi();
+    }
+    //if we have wifi and if mqtt havent failed
+    if (WiFi.isConnected() && !mqtt.get_MQTT_connection_failed())
+      mqtt.loop();
   }
   
-  if (WiFi.isConnected() && !mqtt.get_MQTT_connection_failed())
-    mqtt.loop();
   radio.loop();
 }

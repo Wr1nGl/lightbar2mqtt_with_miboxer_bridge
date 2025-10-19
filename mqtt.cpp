@@ -129,8 +129,18 @@ void MQTT::setup()
 
         this->sendAllHomeAssistantDiscoveryMessages();
     }
-    else
+    else{
         Serial.println("[MQTT] Not connected! If you want to retry for connection pres RST button.");
+        Serial.println("[MQTT] Removing lightbars...");
+        for (int i = this->lightbarCount - 1; i >= 0; i--){
+            this->removeLightbar(this->lightbars[i]);
+        }
+        Serial.println("[MQTT] Removing remotes...");
+        for (int i = this->remoteCount - 1; i >= 0; i--){
+            this->removeRemote(this->remotes[i]);
+        }
+    }
+        
 }
 
 boolean MQTT::get_MQTT_connection_failed(){
@@ -191,7 +201,7 @@ bool MQTT::removeRemote(Remote *remote)
     {
         if (this->remotes[i] == remote)
         {
-            this->remotes[i]->registerCommandListener(this->remoteCommandHandler);
+            this->remotes[i]->unregisterCommandListener(this->remoteCommandHandler);
             for (int j = i; j < this->remoteCount - 1; j++)
             {
                 this->remotes[j] = this->remotes[j + 1];
@@ -381,6 +391,7 @@ void MQTT::sendHomeAssistantRemoteDiscoveryMessages(Remote *remote)
 
 void MQTT::loop()
 {
+    //if we have failed there is no need to try to reconnect or run the loop
     if (!this->get_MQTT_connection_failed()){
         if (!this->client->connected())
         {
