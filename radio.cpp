@@ -120,7 +120,7 @@ void Radio::sendCommand(uint32_t serial, byte command, byte options)
         }
         package_id = &this->package_ids[this->num_package_ids];
         package_id->serial = serial;
-        package_id->package_id = 0;
+        package_id->package_id = -1;
         this->num_package_ids++;
     }
     
@@ -327,6 +327,11 @@ void Radio::handle_xiaomi_Package()
     if (package_id <= package_id_for_serial->serial && package_id > package_id_for_serial->serial - 64)
     {
         Serial.println("[Radio] Ignoring package with too low package number!");
+        return;
+    }
+
+    //actual logic against executing multiple packets with the same ID
+    if (package_id_for_serial->package_id == package_id){
         return;
     }
     package_id_for_serial->package_id = package_id;

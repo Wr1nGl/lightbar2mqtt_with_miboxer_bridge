@@ -13,7 +13,7 @@ class Remote;
 struct PackageIdForSerial
 {
     uint32_t serial;
-    uint8_t package_id;
+    int16_t package_id;
 };
 
 class Radio
