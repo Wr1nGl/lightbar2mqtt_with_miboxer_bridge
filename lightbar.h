@@ -35,6 +35,8 @@ public:
     void setTemperature(uint8_t value);
     void setMiredTemperature(uint mireds);
     void setBrightness(uint8_t value);
+    void toggleInternalState();
+    bool getOnState();
 
 private:
     Radio *radio;

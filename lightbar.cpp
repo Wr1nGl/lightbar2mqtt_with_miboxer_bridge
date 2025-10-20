@@ -13,6 +13,16 @@ Lightbar::~Lightbar()
 {
 }
 
+void Lightbar::toggleInternalState()
+{
+    onState = !onState;
+}
+
+bool Lightbar::getOnState()
+{
+    return onState;
+}
+
 uint32_t Lightbar::getSerial()
 {
     return this->serial;

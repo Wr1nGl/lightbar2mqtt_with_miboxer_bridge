@@ -27,6 +27,8 @@ public:
     const String getCombinedRootTopic();
     const String getClientId();
     boolean get_MQTT_connection_failed();
+    void publishLightbarState(Lightbar *lightbar);
+    Lightbar *get_lightbar_by_ID(uint32_t serial);
 
 private:
     boolean MQTT_connection_failed = false;

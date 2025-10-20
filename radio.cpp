@@ -164,7 +164,7 @@ void Radio::sendCommand(uint32_t serial, byte command)
 }
 
 void Radio::set_miboxer_remote(){
-    Serial.println("Setting miboxer remote settings");
+    Serial.println("[Radio] Setting miboxer remote settings");
     this->radio.stopListening();
     this->radio.setChannel(MIBOXER_RADIO_CHANNEL + 2);
     this->radio.setDataRate(RF24_1MBPS);
@@ -174,7 +174,7 @@ void Radio::set_miboxer_remote(){
 }
 
 void Radio::set_xiaomi_bar(){
-    Serial.println("Setting xiaomi bar settings");
+    Serial.println("[Radio] Setting xiaomi bar settings");
     this->radio.stopListening();
     this->radio.setChannel(68);
     this->radio.setPayloadSize(17);
