@@ -11,8 +11,6 @@
  * 15 – 16: CRC16 checksum
  */
 
-//static void format(uint8_t const* packet, char* buffer);
-
 Radio::Radio(uint8_t ce, uint8_t csn)
 {
     this->radio = RF24(ce, csn);
@@ -120,7 +118,7 @@ void Radio::sendCommand(uint32_t serial, byte command, byte options)
         }
         package_id = &this->package_ids[this->num_package_ids];
         package_id->serial = serial;
-        package_id->package_id = -1;
+        package_id->package_id = 0;
         this->num_package_ids++;
     }
     
@@ -148,14 +146,12 @@ void Radio::sendCommand(uint32_t serial, byte command, byte options)
     Serial.println();
 
     this->radio.stopListening();
-    for (int k = 0; k < 20; k++)
+    for (int i = 0; i < 20; i++)
     {
         this->radio.write(&data, sizeof(data), true);
-
         delay(10);
     }
     this->set_miboxer_remote();
-    //this->radio.startListening();
 }
 
 void Radio::sendCommand(uint32_t serial, byte command)
@@ -197,7 +193,7 @@ void Radio::setup()
         this->init_time_lock = true;
     }
 
-    //calculate the miboxer remote address
+    //calculate the miboxer remote address, in-place change
     this->calculate_address();
 
     Serial.println("[Radio] Setting up radio...");
@@ -330,10 +326,13 @@ void Radio::handle_xiaomi_Package()
         return;
     }
 
-    //actual logic against executing multiple packets with the same ID
-    if (package_id_for_serial->package_id == package_id){
-        return;
+    if (package_id_for_serial->never_read) {
+        package_id_for_serial->never_read = false;
     }
+    else if (package_id_for_serial->package_id == package_id){
+        return; 
+    }
+    
     package_id_for_serial->package_id = package_id;
 
     Serial.println("[Radio] Package received!");

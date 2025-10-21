@@ -83,8 +83,7 @@ void MQTT::onMessage(char *topic, byte *payload, unsigned int length)
 
         if (command.hasOwnProperty("state"))
         {
-            const char *state = command["state"];
-            lightbar->setOnOff(!strcmp(state, "ON"));
+            lightbar->onOff();
             this->publishLightbarState(lightbar);
         }
 
@@ -100,7 +99,7 @@ void MQTT::onMessage(char *topic, byte *payload, unsigned int length)
     }
 }
 
-Lightbar *MQTT::get_lightbar_by_ID(uint32_t serial){
+Lightbar *MQTT::get_lightbar_by_serial(uint32_t serial){
     for (int i = 0; i < this->lightbarCount; i++){
         if (this->lightbars[i]->getSerial() == serial){
             return this->lightbars[i];
@@ -140,11 +139,19 @@ void MQTT::setup()
             Serial.println(" trying again in 1 second.");
             delay(1000);
             retries++;
+
             //try to connect to MQTT
+            //if we want to enforce MQTT
+            if (NUMBER_OF_MQTT_RETRIES == -1){
+                if (retries > 60){
+                    ESP.restart();
+                }
+            }
+            //if we want to be able to use the bridge without MQTT
             if (retries >= NUMBER_OF_MQTT_RETRIES){
+                
                 this->MQTT_connection_failed = true;
                 break;
-                //ESP.restart();
             }
         }
     }
@@ -156,19 +163,29 @@ void MQTT::setup()
         this->client->subscribe(String(this->getCombinedRootTopic() + "/+/toggle_internal").c_str());
 
         this->sendAllHomeAssistantDiscoveryMessages();
+        
+        //send your current state after init, should be on by default
+        for (int i = 0; i < this->lightbarCount; i++){
+            this->publishLightbarState(this->lightbars[i]);
+        }
     }
     else{
         Serial.println("[MQTT] Not connected! If you want to retry for connection pres RST button.");
-        Serial.println("[MQTT] Removing lightbars...");
-        for (int i = this->lightbarCount - 1; i >= 0; i--){
-            this->removeLightbar(this->lightbars[i]);
+        //cleanup of lightbars and remotes if we just lost connection and couldnt reconnect while not enforcing MQTT
+        if (this->lightbarCount > 0){
+            Serial.println("[MQTT] Removing lightbars...");
+            for (int i = this->lightbarCount - 1; i >= 0; i--){
+                this->removeLightbar(this->lightbars[i]);
+            }
         }
-        Serial.println("[MQTT] Removing remotes...");
-        for (int i = this->remoteCount - 1; i >= 0; i--){
-            this->removeRemote(this->remotes[i]);
+        
+        if (this->remoteCount > 0){
+            Serial.println("[MQTT] Removing remotes...");
+            for (int i = this->remoteCount - 1; i >= 0; i--){
+                this->removeRemote(this->remotes[i]);
+            }
         }
     }
-        
 }
 
 boolean MQTT::get_MQTT_connection_failed(){
@@ -451,7 +468,7 @@ void MQTT::sendAction(Remote *remote, byte command, byte options)
     {
     case Lightbar::Command::ON_OFF:{
         action = "press";
-        Lightbar *lightbar = this->get_lightbar_by_ID(remote->getSerial());
+        Lightbar *lightbar = this->get_lightbar_by_serial(remote->getSerial());
         lightbar->toggleInternalState();
         this->publishLightbarState(lightbar);
         break;

@@ -54,12 +54,6 @@ void Lightbar::onOff()
     onState = !onState;
 }
 
-void Lightbar::setOnOff(bool on)
-{
-    if (onState != on)
-        this->onOff();
-}
-
 void Lightbar::brighter()
 {
     this->sendRawCommand(Lightbar::Command::BRIGHTER);
