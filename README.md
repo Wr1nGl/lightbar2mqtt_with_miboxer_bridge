@@ -7,8 +7,12 @@ The config is partially the same as in [lightbar2mqtt](https://github.com/ebinf/
   - number of groups the bridge should react to and specific group IDs. 0 means all groups.
 - NUMBER_OF_WIFI_RETRIES
   - how many seconds should the wifi wait for connection, default is 60
+  - if set to 0 it will always ignore wifi (and MQTT)
+  - if set to -1 it won't continue without wifi connection - device reset after 60 retries
 - NUMBER_OF_MQTT_RETRIES
   - number of retries for MQTT server connection. It wont try to connect without wifi connection.
+  - if set to 0 it will always ignore MQTT
+  - if set to -1 it won't continue without MQTT connection - device reset after 60 retries
 - WAIT_TIME_ON_STARTUP
   - how many seconds should the bridge listen to xiaomi remote packets (if you want to find out your remote ID). Set it to 0 if you don't need it.
 - Miboxer remote part

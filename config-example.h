@@ -32,8 +32,7 @@ constexpr SerialWithName REMOTES[] = {
 };
 // SET ID IN LIGHTBARS AND IN REMOTES TO THE SAME VALUE. HA is sending commands to lightbar ID and bridge is sending them using remote ID. 
 
-
-// How many seconds should the radio listen for xiaomi original remote signal (if you want to find out remote ID) -> set it to higher number if connecting to wifi takes too long (e.g. 60). 0 means dicovery will be skipped. 
+// How many seconds should the radio listen for xiaomi original remote signal (if you want to find out remote ID) -> set it to higher number if connecting to wifi takes too long (e.g. 60). 0 means xiaomi remote dicovery will be skipped. 
 #define WAIT_TIME_ON_STARTUP 0
 
 /* -- Miboxer remote -------------------------------------------------------------------------------------------*/
@@ -48,7 +47,7 @@ constexpr SerialWithName REMOTES[] = {
 #define MIBOXER_TRAILER 0x05
 
 /* -- WiFi ---------------------------------------------------------------------------------------------------- */
-// Number of retries before giving up on WiFi connection. If you want to reconnect just press RST button. If you have trouble connecting try to increasing this number.
+// Number of retries before giving up on WiFi connection. If you want to reconnect just press RST button. If you have trouble connecting try to increasing this number. Set to -1 to always connect to wifi and 0 to ignore wifi
 #define NUMBER_OF_WIFI_RETRIES 60
 
 // The SSID of the WiFi network to connect to.
@@ -58,7 +57,7 @@ constexpr SerialWithName REMOTES[] = {
 #define WIFI_PASSWORD "<Your Password>"
 
 /* -- MQTT ---------------------------------------------------------------------------------------------------- */
-// Number of retries before giving up on MQTT. If you want to reconnect just press RST button.
+// Number of retries before giving up on MQTT. If you want to reconnect just press RST button. Set to -1 to always look for MQQT, set to 0 to disable MQQT
 #define NUMBER_OF_MQTT_RETRIES 3
 
 // The IP address of the MQTT broker to connect to.

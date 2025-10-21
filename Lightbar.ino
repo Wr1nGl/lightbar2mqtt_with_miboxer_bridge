@@ -25,10 +25,12 @@ void setupWifi()
     delay(1000);
     Serial.print(".");
     retries++;
-    if (retries >= NUMBER_OF_WIFI_RETRIES){
+    if (NUMBER_OF_WIFI_RETRIES == -1 && retries >= NUMBER_OF_WIFI_RETRIES){
+      ESP.restart();
+    }
+    else if (retries >= NUMBER_OF_WIFI_RETRIES){
       WIFI_connection_failed = true;
       break;
-      //ESP.restart();
     }
   }
 
@@ -55,31 +57,32 @@ void setup()
 
   radio.setup();
 
-  setupWifi();
+  if (NUMBER_OF_WIFI_RETRIES > 0)
+    setupWifi();
 
   //no need to connect to MQTT if we dont have wifi
-  if (WiFi.isConnected())
+  if (NUMBER_OF_MQTT_RETRIES != 0 && WiFi.isConnected())
     mqtt.setup();
   
   for (int i = 0; i < sizeof(REMOTES) / sizeof(SerialWithName); i++)
   {
     Remote *remote = new Remote(&radio, REMOTES[i].serial, REMOTES[i].name, REMOTES[i].miboxer_groups_len, REMOTES[i].miboxer_groups);
-    if (WiFi.isConnected() && !mqtt.get_MQTT_connection_failed())
+    if (NUMBER_OF_MQTT_RETRIES != 0 && WiFi.isConnected() && !mqtt.get_MQTT_connection_failed())
       mqtt.addRemote(remote);
   }
 
   for (int i = 0; i < sizeof(LIGHTBARS) / sizeof(SerialWithName); i++)
   {
     Lightbar *lightbar = new Lightbar(&radio, LIGHTBARS[i].serial, LIGHTBARS[i].name);
-    if (WiFi.isConnected() && !mqtt.get_MQTT_connection_failed())
+    if (NUMBER_OF_MQTT_RETRIES != 0 && WiFi.isConnected() && !mqtt.get_MQTT_connection_failed())
       mqtt.addLightbar(lightbar);
   }
 }
 
 void loop()
 {
-  //if wifi havent failed
-  if(!WIFI_connection_failed){
+  //if wifi havent failed and is enabled
+  if(NUMBER_OF_WIFI_RETRIES != 0 && !WIFI_connection_failed){
     //if we lost connection reconnect
     if (!WiFi.isConnected())
     {
@@ -87,7 +90,7 @@ void loop()
       setupWifi();
     }
     //if we have wifi and if mqtt havent failed
-    if (WiFi.isConnected() && !mqtt.get_MQTT_connection_failed())
+    if (NUMBER_OF_MQTT_RETRIES != 0 && WiFi.isConnected() && !mqtt.get_MQTT_connection_failed())
       mqtt.loop();
   }
   
