@@ -1,5 +1,6 @@
 #include "radio.h"
 #include "config.h"
+#include "bridge.h"
 
 /*
  * Package structure fo xiaomi bar:
@@ -380,23 +381,70 @@ void Radio::handle_miboxer_Package()
         //set last counter to stop receiving multiple commands with the same counter
         this->last_remote_packet_counter = 0;
         this->last_remote_packet_counter = packet_without_crc_and_padding[6];
-        //turn on or off command
-        if (packet_without_crc_and_padding[4] == 0x01){
-            //look for the given group for each remote
-            Remote *remote = nullptr;
-            //loop through all the remotes
-            for (int i = 0; i < this->num_remotes; i++){
-                remote = this->remotes[i];
-                //loop all the trigger channels
-                for (int q = 0; q < remote->getNum_triggers(); q++){
-                    //check if the given group is valid for given remote
-                    if (packet_without_crc_and_padding[5] == remote->getTrigger_groups()[q]){
-                        //send signal to turn the bar on or off for all the remotes
-                        this->sendCommand(remote->getSerial(), 0x01);
-                        remote->callback(1, 0);
-                        break;
+
+        //loop through the command config
+        for (const auto& converter : converted_commands){
+            if (converter.miboxer == packet_without_crc_and_padding[4]){
+                Remote *remote = nullptr;
+                //loop through all the remotes
+                for (int i = 0; i < this->num_remotes; i++){
+                    remote = this->remotes[i];
+                    //loop all the trigger channels
+                    boolean found_command = false;
+                    //if this is removed, data will trigger on/off functions
+                    if (packet_without_crc_and_padding[4] == 0x01){
+                        for (int q = 0; q < remote->getLen_trigger_groups_ON(); q++){
+                            //check if the given group is valid for given remote
+                            if (packet_without_crc_and_padding[converter.packet_group_data_location] == remote->getTrigger_groups_ON()[q]){
+                                /*
+                                Serial.println("Activating ON");
+                                Serial.println(packet_without_crc_and_padding[converter.packet_group_data_location]);
+                                Serial.println(remote->getTrigger_groups_ON()[q]);
+                                //*/
+                                //send signal to turn the bar on or off for all the remotes
+                                converter.function(this, remote, packet_without_crc_and_padding[5]);
+                                found_command = true;
+                                break;
+                            }
+                        }
+                    
+                        //if command was found no need to continue the loop the off button allowed commands
+                        if (found_command)
+                            continue;
+
+                        for (int q = 0; q < remote->getLen_trigger_groups_OFF(); q++){
+                            //check if the given group is valid for given remote
+                            if (packet_without_crc_and_padding[converter.packet_group_data_location] == remote->getTrigger_groups_OFF()[q]){
+                                /*
+                                Serial.println("Activating OFF");
+                                Serial.println(packet_without_crc_and_padding[converter.packet_group_data_location]);
+                                Serial.println(remote->getTrigger_groups_OFF()[q]);
+                                //*/
+                                //send signal to turn the bar on or off for all the remotes
+                                converter.function(this, remote, packet_without_crc_and_padding[5]);
+                                found_command = true;
+                                break;
+                            }
+                        }
+                    }
+                    else{
+                        for (int q = 0; q < remote->getLen_trigger_groups_DATA(); q++){
+                            //check if the given group is valid for given remote
+                            if (packet_without_crc_and_padding[converter.packet_group_data_location] == remote->getTrigger_groups_DATA()[q]){
+                                /*
+                                Serial.println("Activating DATA");
+                                Serial.println(packet_without_crc_and_padding[converter.packet_group_data_location]);
+                                Serial.println(remote->getTrigger_groups_DATA()[q]);
+                                //*/
+                                //send signal to turn the bar on or off for all the remotes
+                                converter.function(this, remote, packet_without_crc_and_padding[5]);
+                                found_command = true;
+                                break;
+                            }
+                        }
                     }
                 }
+                break;
             }
         }
     }

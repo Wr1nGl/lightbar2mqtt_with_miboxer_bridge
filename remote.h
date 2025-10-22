@@ -9,7 +9,7 @@ class Radio;
 class Remote
 {
 public:
-    Remote(Radio *radio, uint32_t serial, const char *name, uint8_t trigger_groups_len, const uint8_t *trigger_groups);
+    Remote(Radio *radio, uint32_t serial, const char *name, const uint8_t len_groups_ON, const uint8_t *trigger_groups_ON, const uint8_t len_groups_OFF, const uint8_t *trigger_groups_OFF, const uint8_t len_groups_DATA, const uint8_t *trigger_groups_DATA);
     ~Remote();
 
     uint32_t getSerial();
@@ -21,8 +21,13 @@ public:
 
     void callback(byte command, byte options);
 
-    uint8_t getNum_triggers();
-    uint8_t* getTrigger_groups();
+    uint8_t* getTrigger_groups_ON();
+    uint8_t* getTrigger_groups_OFF();
+    uint8_t* getTrigger_groups_DATA();
+
+    uint8_t getLen_trigger_groups_ON();
+    uint8_t getLen_trigger_groups_OFF();
+    uint8_t getLen_trigger_groups_DATA();
 
 private:
     Radio *radio;
@@ -33,9 +38,14 @@ private:
     std::function<void(Remote *, byte, byte)> commandListeners[constants::MAX_COMMAND_LISTENERS];
     uint8_t numCommandListeners = 0;
 
-    void generate_trigger_groups(const uint8_t *trigger_groups);
-    uint8_t trigger_groups[18];
-    uint8_t num_triggers = 0;
+    void generate_trigger_groups(const uint8_t *trigger_groups, uint8_t *trigger_group_to_be_filled, int modifier, uint8_t length);
+    uint8_t trigger_groups_ON[9];
+    uint8_t trigger_groups_OFF[9];
+    uint8_t trigger_groups_DATA[9];
+
+    uint8_t len_trigger_groups_ON;
+    uint8_t len_trigger_groups_OFF;
+    uint8_t len_trigger_groups_DATA;
 };
 
 #endif

@@ -26,9 +26,11 @@ constexpr SerialWithName LIGHTBARS[] = {
 // If you don't know the serial of your remote, just set this to any value and flash your controller. Once
 // the controller is running, for X seconds if you move the controller, the serial of your remote will be printed to the console.
 //
-// The name will be used in Home Assistant. -> xiaomi remote id, remote name in HA, number of groups, groups in miboxer remote it should listen to. Maximum of 9 groups is supported.
+// The name will be used in Home Assistant. -> xiaomi remote id, remote name in HA, number of ON groups, which groups should the remote react to when ON is pressed, number of OFF groups, which groups should the remote react to when OFF is pressed, number of DATA groups, which groups should the remote react to when DATA is pressed.
+// Maximum of 9 groups is supported. DATA mean temperature and brigtness controll. 
+// For example this 1, {0}, 2, {0,2}, 1, {2} will let you change bar on/off state when you press (on miboxer remote) ALL ON, ALL OFF, OFF for 2nd group and you can control temperature/brightness of the bar when you control 2nd group.
 constexpr SerialWithName REMOTES[] = {
-    {0xABCDEF, "Remote 1", 2, {0,2}},
+    {0xCCFE63, "Remote 1", {0}, {0,2}, {2}}
 };
 // SET ID IN LIGHTBARS AND IN REMOTES TO THE SAME VALUE. HA is sending commands to lightbar ID and bridge is sending them using remote ID. 
 

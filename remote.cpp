@@ -1,6 +1,6 @@
 #include "remote.h"
-
-Remote::Remote(Radio *radio, uint32_t serial, const char *name, uint8_t trigger_groups_len, const uint8_t *trigger_groups)
+#include "remote.h"
+Remote::Remote(Radio *radio, uint32_t serial, const char *name, const uint8_t len_groups_ON, const uint8_t *trigger_groups_ON, const uint8_t len_groups_OFF, const uint8_t *trigger_groups_OFF, const uint8_t len_groups_DATA, const uint8_t *trigger_groups_DATA)
 {
     this->radio = radio;
     this->serial = serial;
@@ -10,32 +10,47 @@ Remote::Remote(Radio *radio, uint32_t serial, const char *name, uint8_t trigger_
 
     this->serialString = "0x" + String(this->serial, HEX);
 
-    this->num_triggers = trigger_groups_len;
-    this->generate_trigger_groups(trigger_groups);
+    this->len_trigger_groups_ON = len_groups_ON;
+    this->len_trigger_groups_OFF = len_groups_OFF;
+    this->len_trigger_groups_DATA = len_groups_DATA;
+    
+    this->generate_trigger_groups(trigger_groups_ON, this->trigger_groups_ON, 0, len_groups_ON);
+    this->generate_trigger_groups(trigger_groups_OFF, this->trigger_groups_OFF, 9, len_groups_OFF);
+    this->generate_trigger_groups(trigger_groups_DATA, this->trigger_groups_DATA, 0, len_groups_DATA);
 }
 
 Remote::~Remote()
 {
 }
 
-uint8_t* Remote::getTrigger_groups(){
-    return this->trigger_groups;
+uint8_t* Remote::getTrigger_groups_ON(){
+    return this->trigger_groups_ON;
 }
 
-uint8_t Remote::getNum_triggers(){
-    return this->num_triggers;
+uint8_t Remote::getLen_trigger_groups_ON(){
+    return this->len_trigger_groups_ON;
 }
 
-void Remote::generate_trigger_groups(const uint8_t *trigger_groups){
-    int insert_counter = 0;
-    for (int i = 0; i < this->num_triggers; i++){
-        //on trigger
-        this->trigger_groups[insert_counter++] = trigger_groups[i];
-        //off trigger - turn off is encoded as group + 9 -> based on my remote (c5)
-        this->trigger_groups[insert_counter++] = trigger_groups[i] + 9;
+uint8_t* Remote::getTrigger_groups_OFF(){
+    return this->trigger_groups_OFF;
+}
+
+uint8_t Remote::getLen_trigger_groups_OFF(){
+    return this->len_trigger_groups_OFF;
+}
+
+uint8_t* Remote::getTrigger_groups_DATA(){
+    return this->trigger_groups_DATA;
+}
+
+uint8_t Remote::getLen_trigger_groups_DATA(){
+    return this->len_trigger_groups_DATA;
+}
+
+void Remote::generate_trigger_groups(const uint8_t *trigger_groups, uint8_t *trigger_group_to_be_filled, int modifier, uint8_t length){
+    for (int i = 0; i < length; i++){
+        trigger_group_to_be_filled[i] = trigger_groups[i] + modifier;
     }
-    //the triggers doubled (on and off for each group) so update it
-    this->num_triggers = insert_counter;
 }
 
 uint32_t Remote::getSerial()

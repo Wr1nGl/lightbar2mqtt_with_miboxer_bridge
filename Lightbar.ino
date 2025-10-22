@@ -66,7 +66,7 @@ void setup()
   
   for (int i = 0; i < sizeof(REMOTES) / sizeof(SerialWithName); i++)
   {
-    Remote *remote = new Remote(&radio, REMOTES[i].serial, REMOTES[i].name, REMOTES[i].miboxer_groups_len, REMOTES[i].miboxer_groups);
+    Remote *remote = new Remote(&radio, REMOTES[i].serial, REMOTES[i].name, REMOTES[i].num_groups_ON, REMOTES[i].trigger_groups_ON, REMOTES[i].num_groups_OFF, REMOTES[i].trigger_groups_OFF, REMOTES[i].num_groups_DATA, REMOTES[i].trigger_groups_DATA);
     if (NUMBER_OF_MQTT_RETRIES != 0 && WiFi.isConnected() && !mqtt.get_MQTT_connection_failed())
       mqtt.addRemote(remote);
   }
